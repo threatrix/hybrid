@@ -1,1 +1,1 @@
-source <(curl -s https://raw.githubusercontent.com/threatrix/hybrid/main/20220927.update)
+source <(curl -s https://raw.githubusercontent.com/threatrix/hybrid/master/20220927.update)
