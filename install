@@ -18,8 +18,8 @@ sleep 60
 sudo docker exec -it threatrix-db cqlsh -f /opt/threatrix/threatrix-schema.cql
 sudo docker exec -it threatrix-db cqlsh -f /opt/threatrix/corp-keyspace-schema.cql
 
-# From CQLSH run
-sudo docker exec -it threatrix-db cqlsh -e "OPY threatrix.license FROM '/opt/threatrix/license.cql' WITH HEADER=TRUE AND MINBATCHSIZE=1 AND MAXBATCHSIZE=1 AND PAGESIZE=10;"
+# Import licenses
+sudo docker exec -it threatrix-db cqlsh -e "COPY threatrix.license FROM '/opt/threatrix/license.cql' WITH HEADER=TRUE AND MINBATCHSIZE=1 AND MAXBATCHSIZE=1 AND PAGESIZE=10;"
 
 # Deploy and Run Hybrid Server
 sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` --hostname hybrid -d threatrix/hybrid-app
