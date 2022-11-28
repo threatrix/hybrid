@@ -11,7 +11,7 @@ sudo docker run -d --restart always --name elasticsearch --network=host --hostna
 sudo docker run -d --restart always --name kibana --network=host --hostname hybrid kibana:7.12.0
 
 # wait for database to init
-echo '\nWaiting for database to initialize....\n'
+pritnf '\nWaiting for database to initialize....\n'
 sleep 60
 
 # Setup schema
