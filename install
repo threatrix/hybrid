@@ -26,7 +26,7 @@ sudo docker run -d --restart always --name elasticsearch --network=host --hostna
 sudo docker run -d --restart always --name kibana --network=host --hostname hybrid kibana:7.12.0
 
 # wait for database to init
-printf "\n{GREEN}Waiting for database to initialize....\n{NORMAL}"
+printf "\nWaiting for database to initialize....\n"
 sleep 60
 
 # Setup schema
@@ -43,4 +43,4 @@ sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -
 # NON SSL
 sudo docker run -d --network=host --name threatrix-threat-center threatrix/threat-center
 
-printf "\n{GREEN}Threatrix Hybrid installation complete!\n{NORMAL}"
+printf "\nThreatrix Hybrid installation complete!\n"
