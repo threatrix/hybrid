@@ -1,3 +1,18 @@
+RED=$(tput setaf 1)
+GREEN=$(tput setaf 2)
+YELLOW=$(tput setaf 3)
+LIME_YELLOW=$(tput setaf 190)
+POWDER_BLUE=$(tput setaf 153)
+BLUE=$(tput setaf 4)
+MAGENTA=$(tput setaf 5)
+CYAN=$(tput setaf 6)
+WHITE=$(tput setaf 7)
+BRIGHT=$(tput bold)
+NORMAL=$(tput sgr0)
+BLINK=$(tput blink)
+REVERSE=$(tput smso)
+UNDERLINE=$(tput smul)
+
 # Deploy and Run Threatrix Database
 sudo docker run -d --restart always --name threatrix-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db --smp 2 --memory 4G --developer-mode 1
 
@@ -11,7 +26,7 @@ sudo docker run -d --restart always --name elasticsearch --network=host --hostna
 sudo docker run -d --restart always --name kibana --network=host --hostname hybrid kibana:7.12.0
 
 # wait for database to init
-printf '\nWaiting for database to initialize....\n'
+printf "\n{GREEN}Waiting for database to initialize....\n{NORMAL}"
 sleep 60
 
 # Setup schema
@@ -27,3 +42,5 @@ sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -
 # Deploy and Run Threat Center
 # NON SSL
 sudo docker run -d --network=host --name threatrix-threat-center threatrix/threat-center
+
+printf "\n{GREEN}Threatrix Hybrid installation complete!\n{NORMAL}"
