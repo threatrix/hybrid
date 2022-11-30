@@ -43,4 +43,4 @@ sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -
 # NON SSL
 sudo docker run -d --restart always --network=host --name threatrix-threat-center threatrix/threat-center
 
-printf "\nThreatrix Hybrid installation complete!\n"
+printf "\nThreatrix Hybrid installation complete!\n\n"
