@@ -17,7 +17,7 @@ sleep 60
 #sudo docker exec -it threatrix-db cqlsh -f "/opt/threatrix/update/20220927/1506#new_github_app.cql"
 #sudo docker exec -it threatrix-db cqlsh -f "/opt/threatrix/update/20220927/1506#new_github_app.cql"
 
-sudo docker exec -it threatrix-db cqlsh -f "/opt/threatrix/update/20220927/1376#ignored_path_not_ignored(2022-07-18).cql"
+#sudo docker exec -it threatrix-db cqlsh -f "/opt/threatrix/update/20220927/1376#ignored_path_not_ignored(2022-07-18).cql"
 sudo docker exec -it threatrix-db cqlsh -f "/opt/threatrix/update/20220927/1484#adjunct_copied_pct.cql"
 sudo docker exec -it threatrix-db cqlsh -f "/opt/threatrix/update/20220927/1484#Design_schema_changes_for_compliance_dashboard.cql"
 sudo docker exec -it threatrix-db cqlsh -f "/opt/threatrix/update/20220927/1488#add_path_to_scan_asset_match.cql"
