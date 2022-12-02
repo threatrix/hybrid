@@ -1,1 +1,5 @@
+# update with schema updates
 source <(curl -s https://raw.githubusercontent.com/threatrix/hybrid/master/20220927.update)
+
+# update docker images only
+source <(curl -s https://raw.githubusercontent.com/threatrix/hybrid/master/update-docker-only)
