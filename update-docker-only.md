@@ -1,0 +1,31 @@
+## Update database
+sudo docker rm -f threatrix-db
+sudo docker pull threatrix/hybrid-db
+sudo docker run -d --restart always --name threatrix-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db --smp 2 --memory 4G --developer-mode 1
+
+# Wait until Scylla has started before continuing
+#while [ `sudo docker exec -it threatrix-db supervisorctl status scylla |  awk '{print $2}'` != 'RUNNING' ]
+#do
+#        sleep 1
+#done
+echo "Waiting for database to restart..."
+sleep 60
+
+# Run database update scripts
+#sudo docker exec -it threatrix-db cqlsh -f "/opt/threatrix/update/20220927/1484#Design_schema_changes_for_compliance_dashboard.cql"
+
+# Update Hybrid app
+sudo docker rm -f threatrix-hybrid-app
+sudo docker pull threatrix/hybrid-app
+sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` --hostname hybrid -d threatrix/hybrid-app
+
+# Update Threat Center UX
+sudo docker rm -f threatrix-threat-center
+sudo docker pull threatrix/threat-center
+# Non SSL Threat Center
+sudo docker run -d --network=host --name threatrix-threat-center threatrix/threat-center
+# SSL Threat Center
+#sudo docker run -d --network=host --name threatrix-threat-center -v /opt/threatrix/nginx/ssl:/etc/nginx/ssl/:ro -v /opt/threatrix/nginx/conf.d:/etc/nginx/conf.d:ro threatrix/threat-center
+
+# Update local threat agent
+sudo docker pull threatrix/threat-agent
