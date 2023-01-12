@@ -30,6 +30,7 @@ printf "\nWaiting for database to initialize....\n"
 sleep 60
 
 # Setup schema
+printf "\nCreating schemas....\n"
 sudo docker exec -it threatrix-db cqlsh -f /opt/threatrix/threatrix-schema.cql
 sudo docker exec -it threatrix-db cqlsh -f /opt/threatrix/corp-keyspace-schema.cql
 
