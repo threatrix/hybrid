@@ -13,6 +13,9 @@ BLINK=$(tput blink)
 REVERSE=$(tput smso)
 UNDERLINE=$(tput smul)
 
+sudo docker pull threatrix/hybrid-db
+sudo docker pull threatrix/hybrid-app
+sudo docker pull threatrix/threat-center
 
 # Deploy and Run Threatrix Database
 sudo docker run -d --restart always --name threatrix-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db --smp 2 --memory 4G --developer-mode 1
