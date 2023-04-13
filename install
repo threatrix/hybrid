@@ -42,7 +42,7 @@ sudo docker exec -it threatrix-db cqlsh -f /opt/threatrix/corp-keyspace-schema.c
 sudo docker exec -it threatrix-db cqlsh -e "COPY threatrix.license FROM '/opt/threatrix/license.cql' WITH HEADER=TRUE AND MINBATCHSIZE=1 AND MAXBATCHSIZE=1 AND PAGESIZE=10;"
 
 # Deploy and Run Hybrid Server
-sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` --hostname hybrid -d threatrix/hybrid-app
+sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` threatrix/hybrid-app
 
 # Deploy and Run Threat Center
 # NON SSL
