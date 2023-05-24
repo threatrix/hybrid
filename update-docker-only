@@ -1,6 +1,54 @@
+#!/bin/bash
+
+UX=latest
+APP=latest
+DB=latest
+AGENT=latest
+
+usage()
+{
+  echo "Refresh Threatrix Hybrid:"
+  echo "Usage: $0 -h -u <version number> -a <version number> -d <version number> -g <version number>"
+  echo " -h : Help"
+  echo " -u <version number>: Version of the UX you want to upgrade to. Default is latest"
+  echo " -a <version number>: Version of the APP you want to upgrade to. Default is latest"
+  echo " -d <version number>: Version of the DB you want to upgrade to. Default is latest"
+  echo " -g <version number>: Version of the Agent you want to upgrade to. Default is latest"
+  exit 1
+}
+
+while getopts ":u:a:d:g:h" opt; do
+  case ${opt} in
+    h ) # process option h
+        usage
+        exit 1
+        ;;
+    u ) # process option for UX
+        UX=$OPTARG
+        ;;
+    a ) # Process option for App
+        APP=$OPTARG
+        ;;
+    d ) # Process option for DB
+        DB=$OPTARG
+        ;;
+    g ) # Process option for Agent
+        AGENT=$OPTARG
+        ;;
+    default )
+        usage
+        exit 1
+        ;;
+    :)
+        echo "Error: Option -$OPTARG requires an argument."
+        usage
+        exit 1
+  esac
+done
+
 ## Update database
 sudo docker rm -f threatrix-db
-sudo docker pull threatrix/hybrid-db
+sudo docker pull threatrix/hybrid-db:$DB
 sudo docker run -d --restart always --name threatrix-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db --smp 2 --memory 4G --developer-mode 1
 
 # Wait until Scylla has started before continuing
@@ -17,15 +65,16 @@ sleep 60
 # Update Hybrid app
 sudo docker rm -f threatrix-hybrid-app
 sudo docker pull threatrix/hybrid-app
-sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` --hostname hybrid -d threatrix/hybrid-app
+sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` --hostname hybrid -d threatrix/hybrid-app:$APP
 
 # Update Threat Center UX
 sudo docker rm -f threatrix-threat-center
 sudo docker pull threatrix/threat-center
-# Non SSL Threat Center
-sudo docker run -d --network=host --name threatrix-threat-center threatrix/threat-center
-# SSL Threat Center
+# Self signed SSL Threat Center
+sudo docker run -d --restart always --network=host --name threatrix-threat-center threatrix/threat-center:$UX
+
+# Trusted SSL Cert Threat Center
 #sudo docker run -d --network=host --name threatrix-threat-center -v /opt/threatrix/nginx/ssl:/etc/nginx/ssl/:ro -v /opt/threatrix/nginx/conf.d:/etc/nginx/conf.d:ro threatrix/threat-center
 
 # Update local threat agent
-sudo docker pull threatrix/threat-agent
+sudo docker pull threatrix/threat-agent:$AGENT
