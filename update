@@ -87,11 +87,11 @@ while true; do
 done
 echo $NORMAL
 echo $GREEN "Updating app and threat center..."
-sudo docker container rm -f threatrix-threat-center threatrix-hybrid-app threatrix-hybrid-db > update.log
+sudo docker container rm -f threatrix-threat-center threatrix-hybrid-app threatrix-db > update.log
 sudo docker pull threatrix/hybrid-app:$APP >> update.log
 sudo docker pull threatrix/threat-center:$UX >> update.log
-sudo docker pull threatrix/threatrix-db:$DB >> update.log
-sudo docker run -d --restart always --name threatrix-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db:$DB --smp 2 --memory 4G --developer-mode 1 >> update.log
+sudo docker pull threatrix/hybrid-db:$DB >> update.log
+sudo docker run -d --restart always --name hybrid-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db:$DB --smp 2 --memory 4G --developer-mode 1 >> update.log
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Hybrid DB. Please correct the problem and update...."
