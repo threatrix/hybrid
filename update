@@ -69,7 +69,7 @@ while getopts ":u:a:d:h" opt; do
   esac
 done
 
-echo  $GREEN "Refreshing your Hybrid Envirnment with the following components:"
+echo  $GREEN "Updating your Hybrid Envirnment with the following components:"
 echo
 echo "$BLUE  Threat Center: $LIME $UX"
 echo "$BLUE  API          : $LIME $APP"
@@ -86,32 +86,30 @@ while true; do
     esac
 done
 echo $NORMAL
-
-
-echo $BLINK "Refreshing app and threat center..."
-sudo docker container rm -f threatrix-threat-center threatrix-hybrid-app threatrix-hybrid-db
-sudo docker pull threatrix/hybrid-app:$APP
-sudo docker pull threatrix/threat-center:$UX
-sudo docker pull threatrix/hybrid-db:$DB
-sudo docker run -d --restart always --name threatrix-hybrid-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db:$DB --smp 2 --memory 4G --developer-mode 1
+echo $GREEN "Updating app and threat center..."
+sudo docker container rm -f threatrix-threat-center threatrix-hybrid-app threatrix-hybrid-db > update.log
+sudo docker pull threatrix/hybrid-app:$APP >> update.log
+sudo docker pull threatrix/threat-center:$UX >> update.log
+sudo docker pull threatrix/hybrid-db:$DB >> update.log
+sudo docker run -d --restart always --name threatrix-hybrid-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db:$DB --smp 2 --memory 4G --developer-mode 1 >> update.log
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Hybrid DB. Please correct the problem and update...."
 	exit
 fi
 
-sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` --hostname hybrid -d threatrix/hybrid-app:$APP
+sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` --hostname hybrid -d threatrix/hybrid-app:$APP >> update.log
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Application. Please correct the problem and update...."
 	exit
 fi
 
-sudo docker run -d --restart always --network=host --name threatrix-threat-center threatrix/threat-center:$UX
+sudo docker run -d --restart always --network=host --name threatrix-threat-center threatrix/threat-center:$UX >> update.log
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Threat Center. Please correct the problem and update...."
 	exit
 fi
 
-echo $BLINK $GREEN "Threatrix Hybrid update complete!"
+banner "Threatrix Hybrid update complete!"
 echo
