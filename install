@@ -31,6 +31,7 @@ UX=latest
 APP=latest
 DB=latest
 ARG0=$(basename "$0")
+LOG_FILE=install.log
 
 usage()
 {
@@ -91,15 +92,15 @@ done
 echo $NORMAL
 
 
-sudo docker pull threatrix/hybrid-db:$DB
-sudo docker pull threatrix/hybrid-app:$APP
-sudo docker pull threatrix/threat-center:$UX
-sudo docker pull rabbitmq:3
+sudo docker pull threatrix/hybrid-db:$DB >& $LOGFILE
+sudo docker pull threatrix/hybrid-app:$APP >& >> $LOGFILE
+sudo docker pull threatrix/threat-center:$UX >& >> $LOGFILE
+sudo docker pull rabbitmq:3 >& >> $LOGFILE
 sudo docker pull elasticsearch:7.12.0
 sudo docker pull kibana:7.12.0
 
 # Deploy and Run Threatrix Database
-sudo docker run -d --restart always --name threatrix-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db:$DB --smp 2 --memory 4G --developer-mode 1 >& install.log
+sudo docker run -d --restart always --name threatrix-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db:$DB --smp 2 --memory 4G --developer-mode 1 >& >> $LOGFILE
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix database. Please correct the problem and reinstall...."
@@ -107,7 +108,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Install and Run RabbitMQ
-sudo docker run -d --restart always --network=host --hostname hybrid --name rabbitmq  -e RABBITMQ_DEFAULT_USER=threatrix -e RABBITMQ_DEFAULT_PASS=DwkEc?#NxSJS_E6M%qcB rabbitmq:3
+sudo docker run -d --restart always --network=host --hostname hybrid --name rabbitmq  -e RABBITMQ_DEFAULT_USER=threatrix -e RABBITMQ_DEFAULT_PASS=DwkEc?#NxSJS_E6M%qcB rabbitmq:3 >& >> $LOGFILE
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start RabbitMQ. Please correct the problem and reinstall...."
@@ -115,14 +116,14 @@ if [ $? -ne 0 ]; then
 fi
 
 # Install and Run Elastic
-sudo docker run -d --restart always --name elasticsearch --network=host --hostname hybrid -e "discovery.type=single-node" --env ES_JAVA_OPTS="-Xmx3g" elasticsearch:7.12.0
+sudo docker run -d --restart always --name elasticsearch --network=host --hostname hybrid -e "discovery.type=single-node" --env ES_JAVA_OPTS="-Xmx3g" elasticsearch:7.12.0 >& >> $LOGFILE
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start ELastic. Please correct the problem and reinstall...."
 	exit
 fi
 # Install and Run Kibana
-sudo docker run -d --restart always --name kibana --network=host --hostname hybrid kibana:7.12.0
+sudo docker run -d --restart always --name kibana --network=host --hostname hybrid kibana:7.12.0 >& >> $LOGFILE
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Kibana Please correct the problem and reinstall...."
@@ -130,19 +131,23 @@ if [ $? -ne 0 ]; then
 fi
 
 # wait for database to init
+echo
 echo $BLINK "Waiting for database to initialize...."
 sleep 60
-
+echo $NORMAL
+echo
 # Setup schema
 echo $BLINK "Creating schemas...."
-sudo docker exec -it threatrix-db cqlsh -f /opt/threatrix/threatrix-schema.cql
-sudo docker exec -it threatrix-db cqlsh -f /opt/threatrix/corp-keyspace-schema.cql
+echo
+sudo docker exec -it threatrix-db cqlsh -f /opt/threatrix/threatrix-schema.cql >& >> $LOGFILE
+sudo docker exec -it threatrix-db cqlsh -f /opt/threatrix/corp-keyspace-schema.cql >& >> $LOGFILE
 
+echo $NORMAL
 # Import licenses
-sudo docker exec -it threatrix-db cqlsh -e "COPY threatrix.license FROM '/opt/threatrix/license.cql' WITH HEADER=TRUE AND MINBATCHSIZE=1 AND MAXBATCHSIZE=1 AND PAGESIZE=10;"
+sudo docker exec -it threatrix-db cqlsh -e "COPY threatrix.license FROM '/opt/threatrix/license.cql' WITH HEADER=TRUE AND MINBATCHSIZE=1 AND MAXBATCHSIZE=1 AND PAGESIZE=10;" >& >> $LOGFILE
 
 # Deploy and Run Hybrid Server
-sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` threatrix/hybrid-app:$APP
+sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` threatrix/hybrid-app:$APP >& >> $LOGFILE
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Application. Please correct the problem and reinstall...."
@@ -150,11 +155,11 @@ if [ $? -ne 0 ]; then
 fi
 
 # Deploy and Run Threat Center
-sudo docker run -d --restart always --network=host --name threatrix-threat-center threatrix/threat-center:$UX
+sudo docker run -d --restart always --network=host --name threatrix-threat-center threatrix/threat-center:$UX >& >> $LOGFILE
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Threat Center. Please correct the problem and reinstall...."
 	exit
 fi
 
 echo $BLINK $GREEN "Threatrix Hybrid installation complete!"
-echo
+echo $NORMAL
