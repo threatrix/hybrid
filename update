@@ -1,5 +1,117 @@
-# update with schema updates
-source <(curl -s https://raw.githubusercontent.com/threatrix/hybrid/master/20220927.update)
+#!/bin/bash
 
-# update docker images only
-source <(curl -s https://raw.githubusercontent.com/threatrix/hybrid/master/update-docker-only)
+RED=$(tput setaf 1)
+GREEN=$(tput setaf 2)
+YELLOW=$(tput setaf 3)
+LIME=$(tput setaf 190)
+POWDER_BLUE=$(tput setaf 153)
+BLUE=$(tput setaf 4)
+MAGENTA=$(tput setaf 5)
+CYAN=$(tput setaf 6)
+WHITE=$(tput setaf 7)
+BRIGHT=$(tput bold)
+NORMAL=$(tput sgr0)
+BLINK=$(tput blink)
+REVERSE=$(tput smso)
+UNDERLINE=$(tput smul)
+
+banner()
+{
+  echo $BLUE $UNDERLINE "                                            " $NORMAL
+  echo
+  echo $BRIGHT $BLUE "   $@" $NORMAL
+  echo "                                            "
+  echo $BRIGHT $BLUE "   `date`" $NORMAL
+  echo $BLUE $UNDERLINE "                                            " $NORMAL
+  echo
+}
+
+banner "Welcome to Threatrix Hybrid Update Utility"
+UX=latest
+APP=latest
+DB=latest
+ARG0=$(basename "$0")
+
+usage()
+{
+  echo "Usage: $BRIGHT $ARG0 -h -u <ux tag> -a <app tag> -d <db tag>"
+  echo " -h : Help"
+  echo " -u <ux tag>: Version of the UX image you want to upgrade to. Default is latest"
+  echo " -a <app tag>: Version of the APP image you want to upgrade to. Default is latest"
+  echo " -d <db tag>: Version of the DB image you want to upgrade to. Default is latest"
+  echo
+  exit 1
+}
+
+while getopts ":u:a:d:h" opt; do
+  case ${opt} in
+    h ) # process option h
+        usage
+        exit 1
+        ;;
+    u ) # UX Version
+        UX=$OPTARG
+        ;;
+    a ) # App version
+        APP=$OPTARG
+        ;;
+    d ) # DB Version
+        DB=$OPTARG
+        ;;
+    default )
+        usage
+        exit 1
+        ;;
+    :)
+        echo "Error: Option -$OPTARG requires an argument."
+        usage
+        exit 1
+  esac
+done
+
+echo  $GREEN "Refreshing your Hybrid Envirnment with the following components:"
+echo
+echo "$BLUE  Threat Center: $LIME $UX"
+echo "$BLUE  API          : $LIME $APP"
+echo "$BLUE  DB           : $LIME $DB"
+echo $NORMAL
+echo
+
+while true; do
+    read -p "Do you want to continue? ($GREEN y $WHITE or $RED n $WHITE) " yn
+    case $yn in
+        [Yy]* ) echo $GREEN "Proceeding with install..."; break;;
+        [Nn]* ) echo $RED "Aborting install!"; exit;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+echo $NORMAL
+
+
+echo $BLINK "Refreshing app and threat center..."
+sudo docker container rm -f threatrix-threat-center threatrix-hybrid-app threatrix-hybrid-db
+sudo docker pull threatrix/hybrid-app:$APP
+sudo docker pull threatrix/threat-center:$UX
+sudo docker pull threatrix/hybrid-db:$DB
+sudo docker run -d --restart always --name threatrix-hybrid-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db:$DB --smp 2 --memory 4G --developer-mode 1
+
+if [ $? -ne 0 ]; then 
+	echo $RED "Failed to start Threatrix Hybrid DB. Please correct the problem and update...."
+	exit
+fi
+
+sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` --hostname hybrid -d threatrix/hybrid-app:$APP
+
+if [ $? -ne 0 ]; then 
+	echo $RED "Failed to start Threatrix Application. Please correct the problem and update...."
+	exit
+fi
+
+sudo docker run -d --restart always --network=host --name threatrix-threat-center threatrix/threat-center:$UX
+if [ $? -ne 0 ]; then 
+	echo $RED "Failed to start Threatrix Threat Center. Please correct the problem and update...."
+	exit
+fi
+
+echo $BLINK $GREEN "Threatrix Hybrid update complete!"
+echo

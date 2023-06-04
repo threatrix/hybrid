@@ -1,7 +1,8 @@
+#!/bin/bash
 RED=$(tput setaf 1)
 GREEN=$(tput setaf 2)
 YELLOW=$(tput setaf 3)
-LIME_YELLOW=$(tput setaf 190)
+LIME=$(tput setaf 190)
 POWDER_BLUE=$(tput setaf 153)
 BLUE=$(tput setaf 4)
 MAGENTA=$(tput setaf 5)
@@ -13,28 +14,127 @@ BLINK=$(tput blink)
 REVERSE=$(tput smso)
 UNDERLINE=$(tput smul)
 
-sudo docker pull threatrix/hybrid-db
-sudo docker pull threatrix/hybrid-app
-sudo docker pull threatrix/threat-center
+
+banner()
+{
+  echo $BLUE $UNDERLINE "                                            " $NORMAL
+  echo
+  echo $BRIGHT $BLUE "   $@" $NORMAL
+  echo "                                            "
+  echo $BRIGHT $BLUE "   `date`" $NORMAL
+  echo $BLUE $UNDERLINE "                                            " $NORMAL
+  echo
+}
+
+banner "Welcome to Threatrix Hybrid Install"
+UX=latest
+APP=latest
+DB=latest
+ARG0=$(basename "$0")
+
+usage()
+{
+  echo "Usage: $BRIGHT $ARG0 -h -u <ux tag> -a <app tag> -d <db tag>"
+  echo " -h : Help"
+  echo " -u <ux tag>: Version of the UX image you want to upgrade to. Default is latest"
+  echo " -a <app tag>: Version of the APP image you want to upgrade to. Default is latest"
+  echo " -d <db tag>: Version of the DB image you want to upgrade to. Default is latest"
+  echo
+  exit 1
+}
+
+while getopts ":u:a:d:h" opt; do
+  case ${opt} in
+    h ) # process option h
+        usage
+        exit 1
+        ;;
+    u ) # UX Version
+        UX=$OPTARG
+        ;;
+    a ) # App version
+        APP=$OPTARG
+        ;;
+    d ) # DB Version
+        DB=$OPTARG
+        ;;
+    default )
+        usage
+        exit 1
+        ;;
+    :)
+        echo "Error: Option -$OPTARG requires an argument."
+        usage
+        exit 1
+  esac
+done
+
+echo $GREEN "Installing the following components in your Hybrid Envirnment:"
+echo
+echo "$BLUE  Threat Center: $LIME $UX"
+echo "$BLUE  API          : $LIME $APP"
+echo "$BLUE  DB           : $LIME $DB"
+echo "$BLUE  Rabbit MQ    : $LIME rabbitmq:3"
+echo "$BLUE  Elastic      : $LIME elasticsearch:7.12.0"
+echo "$BLUE  Kibana       : $LIME kibana:7.12.0"
+echo $NORMAL
+echo
+
+while true; do
+    read -p "Do you want to continue? ($GREEN y $WHITE or $RED n $WHITE) " yn
+    case $yn in
+        [Yy]* ) echo $GREEN "Proceeding with install..."; break;;
+        [Nn]* ) echo $RED "Aborting install!"; exit;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+echo $NORMAL
+
+
+sudo docker pull threatrix/hybrid-db:$DB
+sudo docker pull threatrix/hybrid-app:$APP
+sudo docker pull threatrix/threat-center:$UX
+sudo docker pull rabbitmq:3
+sudo docker pull elasticsearch:7.12.0
+sudo docker pull kibana:7.12.0
 
 # Deploy and Run Threatrix Database
-sudo docker run -d --restart always --name threatrix-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db --smp 2 --memory 4G --developer-mode 1
+sudo docker run -d --restart always --name threatrix-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db:$DB --smp 2 --memory 4G --developer-mode 1 >& install.log
+
+if [ $? -ne 0 ]; then 
+	echo $RED "Failed to start Threatrix database. Please correct the problem and reinstall...."
+	exit
+fi
 
 # Install and Run RabbitMQ
 sudo docker run -d --restart always --network=host --hostname hybrid --name rabbitmq  -e RABBITMQ_DEFAULT_USER=threatrix -e RABBITMQ_DEFAULT_PASS=DwkEc?#NxSJS_E6M%qcB rabbitmq:3
 
+if [ $? -ne 0 ]; then 
+	echo $RED "Failed to start RabbitMQ. Please correct the problem and reinstall...."
+	exit
+fi
+
 # Install and Run Elastic
 sudo docker run -d --restart always --name elasticsearch --network=host --hostname hybrid -e "discovery.type=single-node" --env ES_JAVA_OPTS="-Xmx3g" elasticsearch:7.12.0
 
+if [ $? -ne 0 ]; then 
+	echo $RED "Failed to start ELastic. Please correct the problem and reinstall...."
+	exit
+fi
 # Install and Run Kibana
 sudo docker run -d --restart always --name kibana --network=host --hostname hybrid kibana:7.12.0
 
+if [ $? -ne 0 ]; then 
+	echo $RED "Failed to start Kibana Please correct the problem and reinstall...."
+	exit
+fi
+
 # wait for database to init
-printf "\nWaiting for database to initialize....\n"
+echo $BLINK "Waiting for database to initialize...."
 sleep 60
 
 # Setup schema
-printf "\nCreating schemas....\n"
+echo $BLINK "Creating schemas...."
 sudo docker exec -it threatrix-db cqlsh -f /opt/threatrix/threatrix-schema.cql
 sudo docker exec -it threatrix-db cqlsh -f /opt/threatrix/corp-keyspace-schema.cql
 
@@ -42,10 +142,19 @@ sudo docker exec -it threatrix-db cqlsh -f /opt/threatrix/corp-keyspace-schema.c
 sudo docker exec -it threatrix-db cqlsh -e "COPY threatrix.license FROM '/opt/threatrix/license.cql' WITH HEADER=TRUE AND MINBATCHSIZE=1 AND MAXBATCHSIZE=1 AND PAGESIZE=10;"
 
 # Deploy and Run Hybrid Server
-sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` threatrix/hybrid-app
+sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` threatrix/hybrid-app:$APP
+
+if [ $? -ne 0 ]; then 
+	echo $RED "Failed to start Threatrix Application. Please correct the problem and reinstall...."
+	exit
+fi
 
 # Deploy and Run Threat Center
-# By Default Self Signed Certificate is enabled.
-sudo docker run -d --restart always --network=host --name threatrix-threat-center threatrix/threat-center
+sudo docker run -d --restart always --network=host --name threatrix-threat-center threatrix/threat-center:$UX
+if [ $? -ne 0 ]; then 
+	echo $RED "Failed to start Threatrix Threat Center. Please correct the problem and reinstall...."
+	exit
+fi
 
-printf "\nThreatrix Hybrid installation complete!\n\n"
+echo $BLINK $GREEN "Threatrix Hybrid installation complete!"
+echo
