@@ -87,7 +87,7 @@ while true; do
 done
 echo $NORMAL
 echo $GREEN "Updating app and threat center..."
-sudo docker container rm -f threatrix-threat-center threatrix-hybrid-app threatrix-db > update.log
+sudo docker container rm -f threatrix-threat-center threatrix-hybrid-app hybrid-db > update.log
 sudo docker pull threatrix/hybrid-app:$APP >> update.log
 sudo docker pull threatrix/threat-center:$UX >> update.log
 sudo docker pull threatrix/hybrid-db:$DB >> update.log
