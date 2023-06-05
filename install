@@ -2,7 +2,6 @@
 RED=$(tput setaf 1)
 GREEN=$(tput setaf 2)
 YELLOW=$(tput setaf 3)
-LIME=$(tput setaf 190)
 POWDER_BLUE=$(tput setaf 153)
 BLUE=$(tput setaf 4)
 MAGENTA=$(tput setaf 5)
@@ -72,24 +71,24 @@ done
 
 echo $GREEN "Installing the following components in your Hybrid Envirnment:"
 echo
-echo "$BLUE  Threat Center: $LIME $UX"
-echo "$BLUE  API          : $LIME $APP"
-echo "$BLUE  DB           : $LIME $DB"
-echo "$BLUE  Rabbit MQ    : $LIME rabbitmq:3"
-echo "$BLUE  Elastic      : $LIME elasticsearch:7.12.0"
-echo "$BLUE  Kibana       : $LIME kibana:7.12.0"
+echo "$BLUE  Threat Center: $YELLOW $UX"
+echo "$BLUE  APP          : $YELLOW $APP"
+echo "$BLUE  DB           : $YELLOW $DB"
+echo "$BLUE  Rabbit MQ    : $YELLOW rabbitmq:3"
+echo "$BLUE  Elastic      : $YELLOW elasticsearch:7.12.0"
+echo "$BLUE  Kibana       : $YELLOW kibana:7.12.0"
 echo $NORMAL
 echo
 
 while true; do
-    read -p "Do you want to continue? ($GREEN y $WHITE or $RED n $WHITE) " yn
+    read -p " Do you want to continue? ($GREEN y $WHITE or $RED n $WHITE) " yn
     case $yn in
-        [Yy]* ) echo; echo $GREEN "Proceeding with install..."; break;;
-        [Nn]* ) echo; echo $RED "Aborting install!"; exit;;
+        [Yy]* ) echo; echo $GREEN "Proceeding with install..."; echo $NORMAL; break;;
+        [Nn]* ) echo; echo $RED "Aborting install!"; echo $NORMAL; exit;;
         * ) echo "Please answer yes or no.";;
     esac
 done
-echo $NORMAL
+
 echo $GREEN "Downloading Containers...."
 sudo docker pull threatrix/hybrid-db:$DB > install.log
 sudo docker pull threatrix/hybrid-app:$APP >> install.log
@@ -104,6 +103,7 @@ sudo docker run -d --restart always --name threatrix-db --volume /opt/threatrix/
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix database. Please correct the problem and reinstall...."
+	echo $NORMAL
 	exit
 fi
 
@@ -112,6 +112,7 @@ sudo docker run -d --restart always --network=host --hostname hybrid --name rabb
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start RabbitMQ. Please correct the problem and reinstall...."
+	echo $NORMAL
 	exit
 fi
 
@@ -120,6 +121,7 @@ sudo docker run -d --restart always --name elasticsearch --network=host --hostna
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start ELastic. Please correct the problem and reinstall...."
+	echo $NORMAL
 	exit
 fi
 # Install and Run Kibana
@@ -127,6 +129,7 @@ sudo docker run -d --restart always --name kibana --network=host --hostname hybr
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Kibana Please correct the problem and reinstall...."
+	echo $NORMAL
 	exit
 fi
 
@@ -147,6 +150,7 @@ sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Application. Please correct the problem and reinstall...."
+	echo $NORMAL
 	exit
 fi
 
@@ -154,9 +158,25 @@ fi
 sudo docker run -d --restart always --network=host --name threatrix-threat-center threatrix/threat-center:$UX  >> install.log
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Threat Center. Please correct the problem and reinstall...."
+	echo $NORMAL
 	exit
 fi
 
+echo
+UX_VERSION=$(docker exec -it threatrix-threat-center cat /var/www/html/assets/version.json | grep version | awk '{ print $2}' | sed 's/"//g')
+if [ $? -ne 0 ]; then
+        UX_VERSION=$UX
+fi
+
+APP_VERSION=$(docker exec -it threatrix-hybrid-app cat /opt/threatrix/version)
+if [ $? -ne 0 ]; then
+        APP_VERSION=$APP
+fi
+
+echo $GREEN "Installed the following versions of Threatrix components in your Hybrid Envirnment:"
+echo
+echo "$BLUE  Threat Center: $YELLOW $UX_VERSION"
+echo "$BLUE  APP          : $YELLOW $APP_VERSION"
 echo
 banner "Threatrix Hybrid installation complete!"
 echo $NORMAL

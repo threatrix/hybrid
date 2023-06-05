@@ -3,7 +3,6 @@
 RED=$(tput setaf 1)
 GREEN=$(tput setaf 2)
 YELLOW=$(tput setaf 3)
-LIME=$(tput setaf 190)
 POWDER_BLUE=$(tput setaf 153)
 BLUE=$(tput setaf 4)
 MAGENTA=$(tput setaf 5)
@@ -14,6 +13,26 @@ NORMAL=$(tput sgr0)
 BLINK=$(tput blink)
 REVERSE=$(tput smso)
 UNDERLINE=$(tput smul)
+
+OLD_UX_VERSION=""
+OLD_APP_VERSION=""
+UX_VERSION=""
+APP_VERSION=""
+
+OLD_UX_VERSION=`docker exec -it threatrix-threat-center cat /var/www/html/assets/version.json | grep version | awk '{ print $2}'| sed 's/"//g' | tr -cd '[:print:]'`
+
+CHECK=$(docker exec -it threatrix-threat-center cat /var/www/html/assets/version.json)
+if [ $? -ne 0 ]; then
+	OLD_UX_VERSION=unknown
+fi
+
+OLD_APP_VERSION=`docker exec -it threatrix-hybrid-app cat /opt/threatrix/version | tr -cd '[:print:]'`
+CHECK=$(docker exec -it threatrix-hybrid-app cat /opt/threatrix/version)
+if [ $? -ne 0 ]; then
+	OLD_APP_VERSION=unknown
+fi
+
+
 
 banner()
 {
@@ -29,16 +48,14 @@ banner()
 banner "Welcome to Threatrix Hybrid Update Utility"
 UX=latest
 APP=latest
-DB=latest
 ARG0=$(basename "$0")
 
 usage()
 {
-  echo "Usage: $BRIGHT $ARG0 -h -u <ux tag> -a <app tag> -d <db tag>"
+  echo "Usage: $BRIGHT $ARG0 -h -u <ux tag> -a <app tag>"
   echo " -h : Help"
   echo " -u <ux tag>: Version of the UX image you want to upgrade to. Default is latest"
   echo " -a <app tag>: Version of the APP image you want to upgrade to. Default is latest"
-  echo " -d <db tag>: Version of the DB image you want to upgrade to. Default is latest"
   echo
   exit 1
 }
@@ -55,9 +72,6 @@ while getopts ":u:a:d:h" opt; do
     a ) # App version
         APP=$OPTARG
         ;;
-    d ) # DB Version
-        DB=$OPTARG
-        ;;
     default )
         usage
         exit 1
@@ -71,45 +85,60 @@ done
 
 echo  $GREEN "Updating your Hybrid Envirnment with the following components:"
 echo
-echo "$BLUE  Threat Center: $LIME $UX"
-echo "$BLUE  API          : $LIME $APP"
-echo "$BLUE  DB           : $LIME $DB"
+echo "$BLUE Threat Center: $YELLOW $UX"
+echo "$BLUE APP          : $YELLOW $APP"
 echo $NORMAL
-echo
 
 while true; do
-    read -p "Do you want to continue? ($GREEN y $WHITE or $RED n $WHITE) " yn
+    read -p " Do you want to continue? ($GREEN y $WHITE or $RED n $WHITE) " yn
     case $yn in
-        [Yy]* ) echo $GREEN "Proceeding with install..."; break;;
-        [Nn]* ) echo $RED "Aborting install!"; exit;;
+        [Yy]* ) echo; echo $GREEN "Proceeding with install..."; echo $NORMAL; break;;
+        [Nn]* ) echo; echo $RED "Aborting install!"; echo $NORMAL; exit;;
         * ) echo "Please answer yes or no.";;
     esac
 done
-echo $NORMAL
-echo $GREEN "Updating app and threat center..."
-sudo docker container rm -f threatrix-threat-center threatrix-hybrid-app hybrid-db > update.log
+
+echo $GREEN "Updating Threatrix App and Threat Center...."
+sudo docker container rm -f threatrix-threat-center threatrix-hybrid-app > update.log
 sudo docker pull threatrix/hybrid-app:$APP >> update.log
 sudo docker pull threatrix/threat-center:$UX >> update.log
-sudo docker pull threatrix/hybrid-db:$DB >> update.log
-sudo docker run -d --restart always --name hybrid-db --volume /opt/threatrix/db:/var/lib/scylla --hostname -threatrix -p 9042:9042 -d threatrix/hybrid-db:$DB --smp 2 --memory 4G --developer-mode 1 >> update.log
 
-if [ $? -ne 0 ]; then 
-	echo $RED "Failed to start Threatrix Hybrid DB. Please correct the problem and update...."
-	exit
-fi
-
+echo $GREEN "Restarting Threatrix App and Threat Center containers...."
 sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` --hostname hybrid -d threatrix/hybrid-app:$APP >> update.log
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Application. Please correct the problem and update...."
+	echo $NORMAL
 	exit
 fi
 
 sudo docker run -d --restart always --network=host --name threatrix-threat-center threatrix/threat-center:$UX >> update.log
+
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Threat Center. Please correct the problem and update...."
+	echo $NORMAL
 	exit
 fi
 
-banner "Threatrix Hybrid update complete!"
+#wait for containers to come up
+sleep 30
+
 echo
+UX_VERSION=$(docker exec -it threatrix-threat-center cat /var/www/html/assets/version.json | grep version | awk '{ print $2}'| sed 's/"//g' |tr -cd '[:print:]')
+CHECK=$(docker exec -it threatrix-threat-center cat /var/www/html/assets/version.json)
+if [ $? -ne 0 ]; then
+	UX_VERSION="unknown"
+fi
+
+APP_VERSION=`docker exec -it threatrix-hybrid-app cat /opt/threatrix/version | tr -cd '[:print:]'`
+CHECK=$(docker exec -it threatrix-hybrid-app cat /opt/threatrix/version)
+if [ $? -ne 0 ]; then
+	APP_VERSION="unknown"
+fi
+
+echo $GREEN "Upgraded the following Threatrix components in your Hybrid envirnment:"
+echo $NORMAL
+echo "$BLUE Threat Center: $WHITE from $YELLOW $OLD_UX_VERSION $WHITE to $GREEN $UX_VERSION"
+echo "$BLUE APP          : $WHITE from $YELLOW $OLD_APP_VERSION $WHITE to $GREEN $APP_VERSION"
+echo $NORMAL
+banner "Threatrix Hybrid update complete!"
