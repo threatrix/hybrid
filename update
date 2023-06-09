@@ -83,7 +83,7 @@ while getopts ":u:a:d:h" opt; do
   esac
 done
 
-echo  $GREEN "Updating your Hybrid Envirnment with the following components:"
+echo  $GREEN "Updating your Hybrid Environment with the following components:"
 echo
 echo "$BLUE Threat Center: $YELLOW $UX"
 echo "$BLUE APP          : $YELLOW $APP"
@@ -136,7 +136,7 @@ if [ $? -ne 0 ]; then
 	APP_VERSION="unknown"
 fi
 
-echo $GREEN "Upgraded the following Threatrix components in your Hybrid envirnment:"
+echo $GREEN "Upgraded the following Threatrix components in your Hybrid Environment:"
 echo $NORMAL
 echo "$BLUE Threat Center: $WHITE from $YELLOW $OLD_UX_VERSION $WHITE to $GREEN $UX_VERSION"
 echo "$BLUE APP          : $WHITE from $YELLOW $OLD_APP_VERSION $WHITE to $GREEN $APP_VERSION"
