@@ -18,16 +18,17 @@ OLD_UX_VERSION=""
 OLD_APP_VERSION=""
 UX_VERSION=""
 APP_VERSION=""
+THREATRIX_NET=threatrix-net
 
-OLD_UX_VERSION=`docker exec -it threatrix-threat-center cat /var/www/html/assets/version.json | grep version | awk '{ print $2}'| sed 's/"//g' | tr -cd '[:print:]'`
+OLD_UX_VERSION=$(sudo docker exec -it threatrix-threat-center cat /var/www/html/assets/version.json >& /dev/null | grep version | awk '{ print $2}'| sed 's/"//g' | tr -cd '[:print:]')
 
-CHECK=$(docker exec -it threatrix-threat-center cat /var/www/html/assets/version.json)
+CHECK=$(sudo docker exec -it threatrix-threat-center cat /var/www/html/assets/version.json >& /dev/null)
 if [ $? -ne 0 ]; then
 	OLD_UX_VERSION=unknown
 fi
 
-OLD_APP_VERSION=`docker exec -it threatrix-hybrid-app cat /opt/threatrix/version | tr -cd '[:print:]'`
-CHECK=$(docker exec -it threatrix-hybrid-app cat /opt/threatrix/version)
+OLD_APP_VERSION=$(sudo docker exec -it threatrix-hybrid-app cat /opt/threatrix/version >& /dev/null | tr -cd '[:print:]')
+CHECK=$(sudo docker exec -it threatrix-hybrid-app cat /opt/threatrix/version >& /dev/null)
 if [ $? -ne 0 ]; then
 	OLD_APP_VERSION=unknown
 fi
@@ -58,6 +59,55 @@ usage()
   echo " -a <app tag>: Version of the APP image you want to upgrade to. Default is latest"
   echo
   exit 1
+}
+
+connect_containers()
+{
+	NETWORKS=$(docker network ls --format '{{.Name}}')
+	CONTAINERS=$(docker ps  --format '{{.Names}}')
+	TRX_CONTAINERS=("threatrix-hybrid-app", "threatrix-threat-center", "threatrix-db", "rabbitmq", "elasticsearch", "kibana")
+	echo $GREEN "Disconnecting containers $WHITE ${TRX_CONTAINERS[*]} ...."
+	for net in $NETWORKS
+	do
+		for cont in $CONTAINERS
+		do
+			if [[ ${TRX_CONTAINERS[@]} =~ $cont ]]
+			then
+				sudo docker network disconnect $net $cont >& /dev/null
+			fi
+		done
+	done
+	echo $GREEN "Connecting containers to $WHITE $THREATRIX_NET ...."
+	sudo docker network connect $THREATRIX_NET threatrix-db >> update.log
+	if [ $? -ne 0 ]; then
+	       	echo $RED "Failed to connect Threatrix database to $WHITE  $THREATRIX_NET. $RED Please correct the problem and upgrade...."
+	       	echo $NORMAL
+	       	exit
+	fi
+	sudo docker network connect $THREATRIX_NET rabbitmq >> update.log
+	if [ $? -ne 0 ]; then
+	       	echo $RED "Failed to connect RabbitMQ to $WHITE $THREATRIX_NET. $RED Please correct the problem and upgrade...."
+	        echo $NORMAL
+	        exit
+	fi
+
+	# Install and Run Elastic
+	sudo docker network connect $THREATRIX_NET elasticsearch >> update.log
+	if [ $? -ne 0 ]; then
+	       	echo $RED "Failed to connect Elastic to $WHITE $THREATRIX_NET. $RED Please correct the problem and upgrade...."
+	        echo $NORMAL
+	        exit
+	fi
+	# Install and Run Kibana
+	sudo docker network connect $THREATRIX_NET kibana >> update.log
+
+	if [ $? -ne 0 ]; then
+	       	echo $RED "Failed to connect Kibana to $WHITE $THREATRIX_NET. $RED Please correct the problem and upgrade...."
+	        echo $NORMAL
+	        exit
+	fi
+	sudo docker restart threatrix-db rabbitmq elasticsearch kibana >> update.log
+	sudo docker network prune -f
 }
 
 while getopts ":u:a:d:h" opt; do
@@ -98,13 +148,28 @@ while true; do
     esac
 done
 
+# check if threat-network exists. If not, create it and restart all containers to use it.
+rm -rf update.log
+sudo docker network ls | grep -w $THREATRIX_NET >& /dev/null
+if [ $? -eq 0 ]
+then
+        echo $GREEN "Threatrix Network exists!"
+else
+        echo $WHITE "Threatrix Network does not exist!"
+	echo $GREEN "Creating Threatrix Network.."
+	sudo docker network create $THREATRIX_NET >> update.log
+	echo $GREEN "Restarting containers to use $WHITE $THREATRIX_NET"
+	connect_containers
+
+fi
+
 echo $GREEN "Updating Threatrix App and Threat Center...."
-sudo docker container rm -f threatrix-threat-center threatrix-hybrid-app > update.log
-sudo docker pull threatrix/hybrid-app:$APP >> update.log
-sudo docker pull threatrix/threat-center:$UX >> update.log
+sudo docker container rm -f threatrix-threat-center threatrix-hybrid-app >> update.log
+#sudo docker pull threatrix/hybrid-app:$APP >> update.log
+#sudo docker pull threatrix/threat-center:$UX >> update.log
 
 echo $GREEN "Restarting Threatrix App and Threat Center containers...."
-sudo docker run -d --restart always --network=host --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` --hostname hybrid -d threatrix/hybrid-app:$APP >> update.log
+sudo docker run -d --restart always --network=$THREATRIX_NET --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` -e THREATRIX_DB_SVC=threatrix-db -e THREATRIX_ELASTIC_SVC=hybrid-elastic -e THREATRIX_MQ_SVC=hybrid-mq --hostname hybrid -d threatrix/hybrid-app:$APP >> update.log
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Application. Please correct the problem and update...."
@@ -112,7 +177,7 @@ if [ $? -ne 0 ]; then
 	exit
 fi
 
-sudo docker run -d --restart always --network=host --name threatrix-threat-center threatrix/threat-center:$UX >> update.log
+sudo docker run -d --network=$THREATRIX_NET --hostname=threatrix-web -p 80:80 -p 443:443 --restart always --name threatrix-threat-center -e BACKEND=threatrix-hybrid-app -e BACKEND_PORT=8080 threatrix/threat-center:$UX  >> update.log
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Threat Center. Please correct the problem and update...."
