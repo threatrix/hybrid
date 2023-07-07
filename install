@@ -171,7 +171,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Deploy and Run Threat Center
-sudo docker run -d --network=$THREATRIX_NET --hostname=threatrix-web -p 80:80 --restart always --name threatrix-threat-center threatrix/threat-center:$UX  >> install.log
+sudo docker run -d --network=$THREATRIX_NET --hostname=threatrix-web -p 80:80 --restart always --name threatrix-threat-center -e BACKEND=threatrix-hybrid-app -e BACKEND_PORT=8080 threatrix/threat-center:$UX  >> install.log
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Threat Center. Please correct the problem and reinstall...."
 	echo $NORMAL
