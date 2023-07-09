@@ -165,8 +165,8 @@ fi
 
 echo $GREEN "Updating Threatrix App and Threat Center...."
 sudo docker container rm -f threatrix-threat-center threatrix-hybrid-app >> update.log
-#sudo docker pull threatrix/hybrid-app:$APP >> update.log
-#sudo docker pull threatrix/threat-center:$UX >> update.log
+sudo docker pull threatrix/hybrid-app:$APP >> update.log
+sudo docker pull threatrix/threat-center:$UX >> update.log
 
 echo $GREEN "Restarting Threatrix App and Threat Center containers...."
 sudo docker run -d --restart always --network=$THREATRIX_NET --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` -e THREATRIX_DB_SVC=threatrix-db -e THREATRIX_ELASTIC_SVC=hybrid-elastic -e THREATRIX_MQ_SVC=hybrid-mq --hostname hybrid -d threatrix/hybrid-app:$APP >> update.log
