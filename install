@@ -76,8 +76,6 @@ echo "$BLUE  Threat Center: $YELLOW $UX"
 echo "$BLUE  APP          : $YELLOW $APP"
 echo "$BLUE  DB           : $YELLOW $DB"
 echo "$BLUE  Rabbit MQ    : $YELLOW rabbitmq:3"
-echo "$BLUE  Elastic      : $YELLOW elasticsearch:7.12.0"
-echo "$BLUE  Kibana       : $YELLOW kibana:7.12.0"
 echo $NORMAL
 echo
 
