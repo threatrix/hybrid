@@ -95,8 +95,6 @@ sudo docker pull threatrix/hybrid-db:$DB > install.log
 sudo docker pull threatrix/hybrid-app:$APP >> install.log
 sudo docker pull threatrix/threat-center:$UX >> install.log
 sudo docker pull rabbitmq:3 >> install.log
-sudo docker pull elasticsearch:7.12.0 >> install.log
-sudo docker pull kibana:7.12.0 >> install.log 
 
 # check if threat-network exists. If not, create it and restart all containers to use it.
 sudo docker network ls | grep $THREATRIX_NET >& /dev/null
@@ -132,23 +130,6 @@ if [ $? -ne 0 ]; then
 	exit
 fi
 
-# Install and Run Elastic
-sudo docker run -d --network=$THREATRIX_NET --restart always --name elasticsearch --hostname hybrid-elastic -e "discovery.type=single-node" --env ES_JAVA_OPTS="-Xmx3g" elasticsearch:7.12.0 >> install.log
-
-if [ $? -ne 0 ]; then 
-	echo $RED "Failed to start ELastic. Please correct the problem and reinstall...."
-	echo $NORMAL
-	exit
-fi
-# Install and Run Kibana
-sudo docker run -d --network=$THREATRIX_NET --restart always --name kibana --hostname hybrid-kibana kibana:7.12.0 >> install.log
-
-if [ $? -ne 0 ]; then 
-	echo $RED "Failed to start Kibana Please correct the problem and reinstall...."
-	echo $NORMAL
-	exit
-fi
-
 # wait for database to init
 echo $GREEN "Waiting for database to initialize...."
 sleep 60
@@ -162,7 +143,7 @@ sudo docker exec -it threatrix-db cqlsh -e "COPY threatrix.license FROM '/opt/th
 
 echo $GREEN "Starting Threatrix Components...."
 # Deploy and Run Hybrid Server
-sudo docker run -d --restart always --network=$THREATRIX_NET --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` -e THREATRIX_DB_SVC=threatrix-db -e THREATRIX_ELASTIC_SVC=hybrid-elastic -e THREATRIX_MQ_SVC=hybrid-mq --hostname hybrid -d threatrix/hybrid-app:$APP >> install.log
+sudo docker run -d --restart always --network=$THREATRIX_NET --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` -e THREATRIX_DB_SVC=threatrix-db -e THREATRIX_MQ_SVC=hybrid-mq --hostname hybrid -d threatrix/hybrid-app:$APP >> install.log
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Application. Please correct the problem and reinstall...."

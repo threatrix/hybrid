@@ -65,7 +65,7 @@ connect_containers()
 {
 	NETWORKS=$(docker network ls --format '{{.Name}}')
 	CONTAINERS=$(docker ps  --format '{{.Names}}')
-	TRX_CONTAINERS=("threatrix-hybrid-app", "threatrix-threat-center", "threatrix-db", "rabbitmq", "elasticsearch", "kibana")
+	TRX_CONTAINERS=("threatrix-hybrid-app", "threatrix-threat-center", "threatrix-db", "rabbitmq")
 	echo $GREEN "Disconnecting containers $WHITE ${TRX_CONTAINERS[*]} ...."
 	for net in $NETWORKS
 	do
@@ -91,22 +91,7 @@ connect_containers()
 	        exit
 	fi
 
-	# Install and Run Elastic
-	sudo docker network connect $THREATRIX_NET elasticsearch >> update.log
-	if [ $? -ne 0 ]; then
-	       	echo $RED "Failed to connect Elastic to $WHITE $THREATRIX_NET. $RED Please correct the problem and upgrade...."
-	        echo $NORMAL
-	        exit
-	fi
-	# Install and Run Kibana
-	sudo docker network connect $THREATRIX_NET kibana >> update.log
-
-	if [ $? -ne 0 ]; then
-	       	echo $RED "Failed to connect Kibana to $WHITE $THREATRIX_NET. $RED Please correct the problem and upgrade...."
-	        echo $NORMAL
-	        exit
-	fi
-	sudo docker restart threatrix-db rabbitmq elasticsearch kibana >> update.log
+	sudo docker restart threatrix-db rabbitmq >> update.log
 	sudo docker network prune -f
 }
 
@@ -169,7 +154,7 @@ sudo docker pull threatrix/hybrid-app:$APP >> update.log
 sudo docker pull threatrix/threat-center:$UX >> update.log
 
 echo $GREEN "Restarting Threatrix App and Threat Center containers...."
-sudo docker run -d --restart always --network=$THREATRIX_NET --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` -e THREATRIX_DB_SVC=threatrix-db -e THREATRIX_ELASTIC_SVC=hybrid-elastic -e THREATRIX_MQ_SVC=hybrid-mq --hostname hybrid -d threatrix/hybrid-app:$APP >> update.log
+sudo docker run -d --restart always --network=$THREATRIX_NET --name threatrix-hybrid-app -e LOCAL_IP=`hostname -I | awk  '{print $1}'` -e THREATRIX_DB_SVC=threatrix-db -e THREATRIX_MQ_SVC=hybrid-mq --hostname hybrid -d threatrix/hybrid-app:$APP >> update.log
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Application. Please correct the problem and update...."
