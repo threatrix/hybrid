@@ -20,17 +20,18 @@ UX_VERSION=""
 APP_VERSION=""
 THREATRIX_NET=threatrix-net
 
-OLD_UX_VERSION=$(sudo docker exec -it threatrix-threat-center cat /var/www/html/assets/version.json >& /dev/null | grep version | awk '{ print $2}'| sed 's/"//g' | tr -cd '[:print:]')
-
-CHECK=$(sudo docker exec -it threatrix-threat-center cat /var/www/html/assets/version.json >& /dev/null)
+CHECK=$(sudo docker exec -it threatrix-threat-center sh -c "cat /var/www/html/assets/version.json 2>/dev/null | grep version")
 if [ $? -ne 0 ]; then
 	OLD_UX_VERSION=unknown
+else
+	OLD_UX_VERSION=$(echo $CHECK | grep -o '"version": "[^"]*' | grep -o '[^"]*$' | tr -cd '[:print:]')
 fi
 
-OLD_APP_VERSION=$(sudo docker exec -it threatrix-hybrid-app cat /opt/threatrix/version >& /dev/null | tr -cd '[:print:]')
-CHECK=$(sudo docker exec -it threatrix-hybrid-app cat /opt/threatrix/version >& /dev/null)
+CHECK=$(sudo docker exec -it threatrix-hybrid-app cat /opt/threatrix/version 2>/dev/null)
 if [ $? -ne 0 ]; then
 	OLD_APP_VERSION=unknown
+else
+	OLD_APP_VERSION=$(echo $CHECK | tr -cd '[:print:]')
 fi
 
 
@@ -49,6 +50,8 @@ banner()
 banner "Welcome to Threatrix Hybrid Update Utility"
 UX=latest
 APP=latest
+PORT=80
+HTTPS=0
 ARG0=$(basename "$0")
 
 usage()
@@ -57,7 +60,8 @@ usage()
   echo " -h : Help"
   echo " -u <ux tag>: Version of the UX image you want to upgrade to. Default is latest"
   echo " -a <app tag>: Version of the APP image you want to upgrade to. Default is latest"
-  echo
+  echo " -p <port number>: Port number which threatrix applcation can use. Default is 80 or 443 based on -s option"
+  echo " -s Enable HTTPS."
   exit 1
 }
 
@@ -95,17 +99,26 @@ connect_containers()
 	sudo docker network prune -f
 }
 
-while getopts ":u:a:d:h" opt; do
+while getopts ":u:a:p:hs" opt; do
   case ${opt} in
     h ) # process option h
         usage
         exit 1
+        ;;
+	s ) # Enable HTTPS
+        HTTPS=1
+		if [ $PORT -eq 80 ]; then
+			PORT=443
+		fi
         ;;
     u ) # UX Version
         UX=$OPTARG
         ;;
     a ) # App version
         APP=$OPTARG
+        ;;
+	p ) # App version
+        PORT=$OPTARG
         ;;
     default )
         usage
@@ -162,7 +175,11 @@ if [ $? -ne 0 ]; then
 	exit
 fi
 
-sudo docker run -d --network=$THREATRIX_NET --hostname=threatrix-web -p 80:80 -p 443:443 --restart always --name threatrix-threat-center -e BACKEND=threatrix-hybrid-app -e BACKEND_PORT=8080 threatrix/threat-center:$UX  >> update.log
+if [ $HTTPS -eq 0 ]; then
+	sudo docker run -d --network=$THREATRIX_NET --hostname=threatrix-web -p $PORT:80  --restart always --name threatrix-threat-center -e BACKEND=threatrix-hybrid-app -e BACKEND_PORT=8080 threatrix/threat-center:$UX  >> update.log
+else
+	sudo docker run -d --network=$THREATRIX_NET --hostname=threatrix-web -p $PORT:443 --restart always --name threatrix-threat-center -e BACKEND=threatrix-hybrid-app -e BACKEND_PORT=8080 threatrix/threat-center:$UX  >> update.log
+fi
 
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Threat Center. Please correct the problem and update...."
