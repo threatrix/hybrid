@@ -265,7 +265,7 @@ echo
 echo "$BLUE  Threat Center: $YELLOW $UX_VERSION"
 echo "$BLUE  APP          : $YELLOW $APP_VERSION"
 echo
-echo $CYAN "Use the following URL to access Threatri Center: $WHITE http://$HOST:$PORT/"
+echo $CYAN "Use the following URL to access Threat Center: $WHITE http://$HOST:$PORT/"
 echo
 banner "Threatrix Hybrid installation complete!"
 echo $NORMAL
