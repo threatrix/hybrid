@@ -38,12 +38,12 @@ fi
 
 banner()
 {
-  echo $BLUE $UNDERLINE "                                            " $NORMAL
+  echo $BLUE $UNDERLINE "                                                  " $NORMAL
   echo
-  echo $BRIGHT $BLUE "   $@" $NORMAL
+  echo $BRIGHT $BLUE "   $REVERSE $@" $NORMAL
   echo "                                            "
-  echo $BRIGHT $BLUE "   `date`" $NORMAL
-  echo $BLUE $UNDERLINE "                                            " $NORMAL
+  echo $BRIGHT $BLUE "       `date`" $NORMAL
+  echo $BLUE $UNDERLINE "                                                  " $NORMAL
   echo
 }
 
@@ -53,6 +53,7 @@ APP=latest
 PORT=80
 HTTPS=0
 ARG0=$(basename "$0")
+HOST=$(hostname -f)
 
 usage()
 {
@@ -207,5 +208,8 @@ echo $GREEN "Upgraded the following Threatrix components in your Hybrid Environm
 echo $NORMAL
 echo "$BLUE Threat Center: $WHITE from $YELLOW $OLD_UX_VERSION $WHITE to $GREEN $UX_VERSION"
 echo "$BLUE APP          : $WHITE from $YELLOW $OLD_APP_VERSION $WHITE to $GREEN $APP_VERSION"
-echo $NORMAL
+echo
+echo $CYAN "Use the following URL to access Threatri Center: $WHITE http://$HOST:$PORT/"
+echo
 banner "Threatrix Hybrid update complete!"
+echo $NORMAL

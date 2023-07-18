@@ -19,9 +19,9 @@ banner()
 {
   echo $BLUE $UNDERLINE "                                            " $NORMAL
   echo
-  echo $BRIGHT $BLUE "   $@" $NORMAL
+  echo $BRIGHT $BLUE "   $REVERSE $@" $NORMAL
   echo "                                            "
-  echo $BRIGHT $BLUE "   `date`" $NORMAL
+  echo $BRIGHT $BLUE "       `date`" $NORMAL
   echo $BLUE $UNDERLINE "                                            " $NORMAL
   echo
 }
@@ -30,21 +30,98 @@ banner "Welcome to Threatrix Hybrid Install"
 UX=latest
 APP=latest
 DB=latest
+PORT=80
+MIN_CPU=8
+MIN_MEM=30
+MIN_DISK=250
+skip_check=0
+HOST=$(hostname -f)
 ARG0=$(basename "$0")
 LOG_FILE=install.log
 
 usage()
 {
-  echo "Usage: $BRIGHT $ARG0 -h -u <ux tag> -a <app tag> -d <db tag>"
-  echo " -h : Help"
-  echo " -u <ux tag>: Version of the UX image you want to upgrade to. Default is latest"
-  echo " -a <app tag>: Version of the APP image you want to upgrade to. Default is latest"
-  echo " -d <db tag>: Version of the DB image you want to upgrade to. Default is latest"
+  echo $CYAN  "Usage: $BRIGHT $ARG0 -h -u <ux tag> -a <app tag> -d <db tag>"
+  echo "$GREEN -h : $WHITE Help"
+  echo "$GREEN -u <ux tag>: $WHITE Version of the UX image you want to upgrade to. Default is latest"
+  echo "$GREEN -a <app tag>: $WHITE Version of the APP image you want to upgrade to. Default is latest"
+  echo "$GREEN -d <db tag>: $WHITE Version of the DB image you want to upgrade to. Default is latest"
+  echo "$GREEN -p <port number>: $WHITE Port number which threatrix applcation can use. Default is 80"
   echo
   exit 1
 }
 
-while getopts ":u:a:d:h" opt; do
+check_disk()
+{
+    # Get the available disk space in bytes
+    available_space=$(df --output=avail /var/lib/docker | tail -n 1)
+
+    # Convert bytes to GB
+    available_space_gb=$(echo "scale=2; $available_space / (1024 * 1024)" | bc)
+
+    # Check if available space is greater than or equal to 250GB
+    if (( $(echo "$available_space_gb >= $MIN_DISK" | bc -l) )); then
+        echo $GREEN "Met minimum disk space requirement of $WHITE $MIN_DISK GB"
+    else
+        echo
+        echo $RED "Only $available_space_gb is available on /var/lib/docker."
+        echo $RED "Disk space is insufficient. Minimum disk space requirement is $MIN_DISK GB. Aborting install!"
+        echo $NORMAL
+        exit 1
+    fi
+}
+
+check_ram()
+{
+    # Get the total memory in kilobytes
+    total_mem=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+
+    # Convert total memory to gigabytes
+    total_mem_gb=$(echo "scale=2; $total_mem / 1024 / 1024" | bc)
+
+    # Define the minimum memory requirement in gigabytes
+    minimum_mem_req=$MIN_MEM
+
+    if (( $(echo "$total_mem_gb < $minimum_mem_req" | bc -l) )); then
+        echo
+        echo $RED "Only $total_mem_gb GB is available. on /var/lib/docker."
+        echo $RED "RAM is insufficient. Minimum RAM requirement is $MIN_MEM GB. Aborting install!"
+        echo $NORMAL
+        exit 1
+    else
+         echo $GREEN "Met minimum RAM requirement of $WHITE $MIN_MEM GB"
+    fi
+
+}
+
+check_cpu()
+{
+ 
+    # Get the number of CPU cores
+    cpu_cores=$(lscpu | grep "CPU(s):" | awk -F': ' '{print $2}')
+
+    if (( $cpu_cores >= $MIN_CPU )) ; then
+        echo $GREEN "Met minimum CPU requirement of $WHITE $MIN_CPU"
+    else
+        echo
+        echo $RED "Only $cpu_cores are available."
+        echo $RED "CPU is insufficient. Minimum CPU requirement is $MIN_CPU. Aborting install!"
+        echo $NORMAL
+        exit 1
+    fi
+}
+
+check_minimum_requirements()
+{
+    if [ $skip_check -eq 0 ]
+    then
+        check_cpu
+        check_ram
+        check_disk
+    fi
+}
+
+while getopts ":u:a:d:p:xh" opt; do
   case ${opt} in
     h ) # process option h
         usage
@@ -59,17 +136,27 @@ while getopts ":u:a:d:h" opt; do
     d ) # DB Version
         DB=$OPTARG
         ;;
+    p ) # App version
+        PORT=$OPTARG
+        ;;
+    x )
+        skip_check=1
+        ;;
+
     default )
         usage
         exit 1
         ;;
     :)
-        echo "Error: Option -$OPTARG requires an argument."
+        echo $RED "Error: Option -$OPTARG requires an argument."
         usage
         exit 1
   esac
 done
 
+# Check if minimumhybrid requirements are met.
+check_minimum_requirements
+echo
 echo $GREEN "Installing the following components in your Hybrid Envirnment:"
 echo
 echo "$BLUE  Threat Center: $YELLOW $UX"
@@ -89,10 +176,15 @@ while true; do
 done
 
 echo $GREEN "Downloading Containers...."
-sudo docker pull threatrix/hybrid-db:$DB > install.log
-sudo docker pull threatrix/hybrid-app:$APP >> install.log
-sudo docker pull threatrix/threat-center:$UX >> install.log
-sudo docker pull rabbitmq:3 >> install.log
+sudo docker pull threatrix/hybrid-db:$DB >& install.log
+if [ $? -ne 0 ]; then
+	       	echo $RED "Unable to download containers. Aborting install!"
+	       	echo $NORMAL
+	       	exit 1
+fi
+sudo docker pull threatrix/hybrid-app:$APP 2>&1 >> install.log
+sudo docker pull threatrix/threat-center:$UX 2>&1 >> install.log
+sudo docker pull rabbitmq:3 2>&1 >> install.log
 
 # check if threat-network exists. If not, create it and restart all containers to use it.
 sudo docker network ls | grep $THREATRIX_NET >& /dev/null
@@ -150,7 +242,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Deploy and Run Threat Center
-sudo docker run -d --network=$THREATRIX_NET --hostname=threatrix-web -p 80:80 --restart always --name threatrix-threat-center -e BACKEND=threatrix-hybrid-app -e BACKEND_PORT=8080 threatrix/threat-center:$UX  >> install.log
+sudo docker run -d --network=$THREATRIX_NET --hostname=threatrix-web -p $PORT:80 --restart always --name threatrix-threat-center -e BACKEND=threatrix-hybrid-app -e BACKEND_PORT=8080 threatrix/threat-center:$UX  >> install.log
 if [ $? -ne 0 ]; then 
 	echo $RED "Failed to start Threatrix Threat Center. Please correct the problem and reinstall...."
 	echo $NORMAL
@@ -172,6 +264,8 @@ echo $GREEN "Installed the following versions of Threatrix components in your Hy
 echo
 echo "$BLUE  Threat Center: $YELLOW $UX_VERSION"
 echo "$BLUE  APP          : $YELLOW $APP_VERSION"
+echo
+echo $CYAN "Use the following URL to access Threatri Center: $WHITE http://$HOST:$PORT/"
 echo
 banner "Threatrix Hybrid installation complete!"
 echo $NORMAL
