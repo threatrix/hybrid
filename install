@@ -98,7 +98,7 @@ check_cpu()
 {
  
     # Get the number of CPU cores
-    cpu_cores=$(lscpu | grep "CPU(s):" | awk -F': ' '{print $2}')
+    cpu_cores=$(lscpu | grep "CPU(s):" | head -1 | awk -F': ' '{print $2}')
 
     if (( $cpu_cores >= $MIN_CPU )) ; then
         echo $GREEN "Met minimum CPU requirement of $WHITE $MIN_CPU"
