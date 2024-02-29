@@ -54,7 +54,7 @@ usage()
 check_disk()
 {
     # Get the available disk space in bytes
-    available_space=$(df --output=avail /var/lib/docker | tail -n 1)
+    available_space=$(df --output=avail /opt | tail -n 1)
 
     # Convert bytes to GB
     available_space_gb=$(echo "scale=2; $available_space / (1024 * 1024)" | bc)
@@ -155,6 +155,7 @@ while getopts ":u:a:d:p:xh" opt; do
 done
 
 # Check if minimumhybrid requirements are met.
+apt install -y bc
 check_minimum_requirements
 echo
 echo $GREEN "Installing the following components in your Hybrid Envirnment:"
