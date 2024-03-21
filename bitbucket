@@ -1,0 +1,8 @@
+vol=$(docker volume ls | grep bitbucketVolume)
+if [ -z "$vol" ]
+then
+    docker volume create --name bitbucketVolume
+fi
+docker stop bitbucket
+#docker run -v /data/bitbucket:/var/atlassian/application-data/bitbucket  --network=threatrix-net --name="bitbucket" -d -p 7990:7990 -p 7999:7999 atlassian/bitbucket
+docker run -v /data/bitbucket:/var/atlassian/application-data/bitbucket --name="bitbucket" -d -p 7990:7990 -p 7999:7999 atlassian/bitbucket
