@@ -48,7 +48,7 @@ usage()
   echo "$GREEN -d <db tag>: $WHITE Version of the DB image you want to upgrade to. Default is latest"
   echo "$GREEN -p <port number>: $WHITE Port number which threatrix applcation can use. Default is 80"
   echo
-  exit 1
+  exit 0
 }
 
 check_disk()

@@ -45,7 +45,7 @@ function usage {
   Write-Host " -d <db tag>: Version of the DB image you want to upgrade to. Default is latest"
   Write-Host " -p <port number>: Port number which threatrix applcation can use. Default is 80"
   Write-Host 
-  exit 1
+  exit 0
 }
 
 function check_disk {
@@ -108,7 +108,7 @@ function check_minimum_requirements {
 function wait_for_confirmation {
     $prompt=$true
     while ($prompt) {
-        $yn = Read-Host "Do you want to continue? y or n ) "
+        $yn = Read-Host "Do you want to continue? (y or n ) "
         switch -wildcard ($yn) {
             "y" {
                 Write-Host 

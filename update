@@ -57,13 +57,13 @@ HOST=$(hostname -f)
 
 usage()
 {
-  echo "Usage: $BRIGHT $ARG0 -h -u <ux tag> -a <app tag>"
+  echo "Usage: $BRIGHT $ARG0 -h -u <ux tag> -a <app tag> -p <port number> -s"
   echo " -h : Help"
   echo " -u <ux tag>: Version of the UX image you want to upgrade to. Default is latest"
   echo " -a <app tag>: Version of the APP image you want to upgrade to. Default is latest"
   echo " -p <port number>: Port number which threatrix applcation can use. Default is 80 or 443 based on -s option"
   echo " -s Enable HTTPS."
-  exit 1
+  exit 0
 }
 
 connect_containers()
@@ -141,8 +141,8 @@ echo $NORMAL
 while true; do
     read -p " Do you want to continue? ($GREEN y $WHITE or $RED n $WHITE) " yn
     case $yn in
-        [Yy]* ) echo; echo $GREEN "Proceeding with install..."; echo $NORMAL; break;;
-        [Nn]* ) echo; echo $RED "Aborting install!"; echo $NORMAL; exit;;
+        [Yy]* ) echo; echo $GREEN "Proceeding with update..."; echo $NORMAL; break;;
+        [Nn]* ) echo; echo $RED "Aborting update!"; echo $NORMAL; exit;;
         * ) echo "Please answer yes or no.";;
     esac
 done
@@ -189,7 +189,7 @@ if [ $? -ne 0 ]; then
 fi
 
 #wait for containers to come up
-sleep 30
+sleep 10
 
 echo
 UX_VERSION=$(docker exec -it threatrix-threat-center cat /var/www/html/assets/version.json | grep version | awk '{ print $2}'| sed 's/"//g' |tr -cd '[:print:]')
