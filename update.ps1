@@ -213,4 +213,4 @@ Write-Color "Threatix Applicaion: from ", "$OLD_APP_VERSION ", "to ", "$APP_VERS
 Write-Host
 Write-Color "Use the following URL to access Threat Center:", " http://${HOSTNAME}:${PORT}/" -Color Blue, Green
 Write-Host
-banner "Threatrix hybrid update complete! "
+banner "Threatrix Hybrid Update complete! "
