@@ -105,6 +105,31 @@ function check_minimum_requirements {
     }
 }
 
+function stop_containers
+{
+
+    # Get a list of all running Docker containers
+    $CONTAINERS = docker ps --format '{{.Names}}'
+ 
+    # Define an array of Threatrix containers
+    $TRX_CONTAINERS = @("threatrix-hybrid-app", "threatrix-threat-center", "threatrix-db", "rabbitmq")
+
+    # Print a message indicating that the containers are being disconnected
+    Write-Host "Stopping containers $TRX_CONTAINERS ...."
+
+    # Disconnect the Threatrix containers from all networks
+ 
+    foreach ($cont in $CONTAINERS) {
+        if ($TRX_CONTAINERS -contains $cont) {
+            docker stop $cont *> $null
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "Failed to stop container $cont. Please correct the problem and upgrade...." -ForegroundColor Red
+                Write-Host 
+                exit
+            } 
+        }
+    }
+}
 function wait_for_confirmation {
     $prompt=$true
     while ($prompt) {
@@ -146,6 +171,9 @@ Write-Color "  Rabbit MQ    :", " rabbitmq:3" -Color Blue, Yellow
 Write-Host
 
 wait_for_confirmation
+
+# Check if an Threatrix specific containers are running and stop them.
+stop_containers
 
 Write-Host "Downloading Container images...."
 docker pull -q threatrix/hybrid-db:$DB > ${LOG_FILE}
@@ -189,49 +217,36 @@ if ($LASTEXITCODE -eq 0) {
     docker network create $THREATRIX_NET >> ${LOG_FILE}
 }
 
-Write-Host "Starting containers...." -ForegroundColor Green
-Write-Output "Starting containers...." >> ${LOG_FILE}
-
-
 # check if DB container is already running
 docker ps -a | findstr $THREATRIX_DB *> $null
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "Warning: Threatrix DB Container already exists!" -ForegroundColor Yellow
-    Write-Host "Stopping ${THREATRIX_DB} container and cleaning up." -ForegroundColor Yellow
-    docker rm -f $THREATRIX_DB *> $null
+    Write-Host "Warning: Threatrix DB Container already exists!" -ForegroundColor Red
+    wait_for_confirmation
+    Write-Host "Stopping ${THREATRIX_DB} container and cleaning up db volume." -ForegroundColor Yellow
+    docker rm -f -v $THREATRIX_DB *> $null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Failed to stop Threatrix database. Please correct the problem and reinstall...." -ForegroundColor Red
-        exit
-    }
-
-}
-# check if threat-network exists. If not, create it and restart all containers to use it.
-docker volumes ls $THREATRIX_DB *> $null
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "Warning: Threatrix DB Volume exists." -ForegroundColor Yellow
-    Write-Host "Warning: Proceeding with install witll re-initilize the DB." -ForegroundColor Yellow
-    wait_for_confirmation
-    docker volume rm $THREATRIX_DB *> $null
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Failed clenup old $THREATRIX_DB. Please correct the problem and reinstall...." -ForegroundColor Red
-        exit
+        exit 1
     }
 }
+
 Write-Host "Creating Threatrix DB Volume." -ForegroundColor Green
 Write-Output "Creating Threatrix DB Volume." >> ${LOG_FILE}
 docker volume create $THREATRIX_DB >> ${LOG_FILE}
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed  to create $THREATRIX_DB. Please correct the problem and reinstall...." -ForegroundColor Red
-    exit
+    exit 1
 }
+
+Write-Host "Starting containers...." -ForegroundColor Green
+Write-Output "Starting containers...." >> ${LOG_FILE}
 
 # Deploy and Run Threatrix Database with newly create volume
 docker run -d --network ${THREATRIX_NET} --restart always --name ${THREATRIX_DB} --volume ${THREATRIX_DB}:/var/lib/scylla --hostname threatrix-db -d threatrix/hybrid-db:$DB --smp 2 --memory 4G --developer-mode 1 >> ${LOG_FILE}
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to start Threatrix database. Please correct the problem and reinstall...." -ForegroundColor Red
-    exit
+    exit 1
 }
 
 # check if rabbit-mq container is already running
@@ -239,10 +254,10 @@ docker ps -a | findstr "rabbitmq" *> $null
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Warning: Rabbit MQ Container is already running!" -ForegroundColor Yellow
     Write-Host "Stopping Rabbit MQ container and cleaning up." -ForegroundColor Yellow
-    docker rm -f rabbitmq *> $null
+    docker rm -f -v rabbitmq *> $null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Failed to cleanup Rabbit MQ. Please correct the problem and reinstall...." -ForegroundColor Red
-        exit
+        exit 1
     }
 } 
 # Install and Run RabbitMQ
