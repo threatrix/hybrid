@@ -27,7 +27,7 @@ function banner {
     Write-Host "                                            " -BackgroundColor White
     Write-Host "    " $args  "    "-ForegroundColor Blue -BackgroundColor White
     Write-Host "                                            " -BackgroundColor White
-    Write-Host "           " $(Get-Date) "          " -ForegroundColor Blue -BackgroundColor White
+    Write-Host "         " $(Get-Date -UFormat "%a %D %r") "         " -ForegroundColor Blue -BackgroundColor White
     Write-Host "                                            " -BackgroundColor White
     Write-Host -ForegroundColor White
 }
