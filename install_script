@@ -1,5 +1,0 @@
-source <(curl -s https://raw.githubusercontent.com/threatrix/hybrid/master/install)
-
-OR
-
-curl -s https://raw.githubusercontent.com/threatrix/hybrid/master/install --output install && chmod 0777 install && sudo ./install
