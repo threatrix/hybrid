@@ -179,7 +179,7 @@ done
 echo $GREEN "Downloading Containers...."
 sudo docker pull threatrix/hybrid-db:$DB >& install.log
 if [ $? -ne 0 ]; then
-	       	echo $RED "Unable to download containers. Aborting install!"
+	       	echo $RED "Unable to download containers. Aborting install! Have you logged in to Dockerhub?"
 	       	echo $NORMAL
 	       	exit 1
 fi
