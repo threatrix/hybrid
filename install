@@ -158,7 +158,7 @@ done
 apt install -y bc
 check_minimum_requirements
 echo
-echo $GREEN "Installing the following components in your Hybrid Envirnment:"
+echo $GREEN "Installing the following components in your Hybrid Environment:"
 echo
 echo "$BLUE  Threat Center: $YELLOW $UX"
 echo "$BLUE  APP          : $YELLOW $APP"
@@ -261,7 +261,7 @@ if [ $? -ne 0 ]; then
         APP_VERSION=$APP
 fi
 
-echo $GREEN "Installed the following versions of Threatrix components in your Hybrid Envirnment:"
+echo $GREEN "Installed the following versions of Threatrix components in your Hybrid Environment:"
 echo
 echo "$BLUE  Threat Center: $YELLOW $UX_VERSION"
 echo "$BLUE  APP          : $YELLOW $APP_VERSION"
