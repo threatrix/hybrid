@@ -162,7 +162,7 @@ if ($HELP) {
 # Check if minimumhybrid requirements are met.
 check_minimum_requirements
 Write-Host
-Write-Host "Installing the following components in your Hybrid Envirnment:"
+Write-Host "Installing the following components in your Hybrid Environment:"
 Write-Host
 Write-Color "  Threat Center:", " $UX" -Color Blue, Yellow
 Write-Color "  APP          :", " $APP" -Color Blue, Yellow
