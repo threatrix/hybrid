@@ -33,7 +33,7 @@ DB=latest
 PORT=80
 MIN_CPU=8
 MIN_MEM=30
-MIN_DISK=250
+MIN_DISK=50
 skip_check=0
 HOST=$(hostname -f)
 ARG0=$(basename "$0")
@@ -59,7 +59,7 @@ check_disk()
     # Convert bytes to GB
     available_space_gb=$(echo "scale=2; $available_space / (1024 * 1024)" | bc)
 
-    # Check if available space is greater than or equal to 250GB
+    # Check if available space is greater than or equal to 50GB
     if (( $(echo "$available_space_gb >= $MIN_DISK" | bc -l) )); then
         echo $GREEN "Met minimum disk space requirement of $WHITE $MIN_DISK GB"
     else
