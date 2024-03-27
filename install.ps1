@@ -20,7 +20,7 @@ $THREATRIX_NET = "threatrix-net"
 $THREATRIX_DB = "threatrix-db"
 $MIN_CPU = 8
 $MIN_MEM = 30
-$MIN_DISK = 250
+$MIN_DISK = 50
 $HOSTNAME = $env:COMPUTERNAME
 $ARG0 = Split-Path -Leaf $MyInvocation.MyCommand.Path
 $LOG_FILE = "install.log"
@@ -55,8 +55,8 @@ function check_disk {
     # Convert bytes to GB
     $available_space_gb = [math]::Round($available_space / 1GB, 2)
  
-    # Check if available space is greater than or equal to 250GB
-    $MIN_DISK = 250
+    # Check if available space is greater than or equal to 50GB
+    $MIN_DISK = 50
     if ($available_space_gb -ge $MIN_DISK) {
         Write-Host "Met minimum disk space requirement of $MIN_DISK GB" -ForegroundColor Green
     } else {
