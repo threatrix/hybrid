@@ -206,15 +206,21 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Sucessfully downloaded rabbitmq:3 container image!" -ForegroundColor Green
 
 # check if threat-network exists. If not, create it and restart all containers to use it.
-docker network ls | Select-String $THREATRIX_NET *> $null
+$net = docker network ls | Select-String $THREATRIX_NET
  
-if ($LASTEXITCODE -eq 0) {
+if ($null -ne $net) {
     Write-Host "Threatrix Network exists!" -ForegroundColor Green
 } else {
     Write-Host "Threatrix Network does not exist!"
-    Write-Host "Creating Threatrix Network.." -ForegroundColor Green
+    Write-Host "Creating Threatrix Network.."
     Write-Output "Creating Threatrix Network.." >> ${LOG_FILE}
     docker network create $THREATRIX_NET >> ${LOG_FILE}
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Unable to create $THREATRIX_NET network. Aborting install!" -ForegroundColor Red
+        Write-Host 
+        exit 1
+    }
+    Write-Host "Created Threatrix Network!" -ForegroundColor Green
 }
 
 # check if DB container is already running
