@@ -19,6 +19,11 @@ source <(curl -s https://raw.githubusercontent.com/threatrix/hybrid/master/updat
 
 ## Windows
 ### Install
-
+```
+Invoke-WebRequest -Uri https://github.com/threatrix/hybrid/blob/master/install.ps1  -OutFile .\install.ps1; .\install.ps1
+```
 
 ### Update
+```
+Invoke-WebRequest -Uri https://github.com/threatrix/hybrid/blob/master/update.ps1  -OutFile .\update.ps1; .\update.ps1
+```
